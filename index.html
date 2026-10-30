@@ -1,0 +1,1287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ohio Crash Dashboard | OSTATS 2021–2026</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0b1220;
+      --bg-card: #121a2b;
+      --bg-elevated: #182235;
+      --border: #243049;
+      --text: #e8eef9;
+      --text-muted: #8b9bb8;
+      --accent: #3b82f6;
+      --accent-soft: rgba(59, 130, 246, 0.15);
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --success: #10b981;
+      --purple: #a78bfa;
+      --cyan: #22d3ee;
+      --orange: #fb923c;
+      --radius: 12px;
+      --shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'IBM Plex Sans', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, #0f1a30 0%, #1a2744 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 1.25rem 1.75rem;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+    .header-brand {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+    }
+    .logo {
+      width: 42px; height: 42px;
+      background: var(--accent);
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: white;
+    }
+    .header h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .header .subtitle {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: var(--accent-soft);
+      color: #93c5fd;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.35rem 0.75rem;
+      border-radius: 999px;
+      border: 1px solid rgba(59, 130, 246, 0.3);
+    }
+    .badge-warn {
+      background: rgba(245, 158, 11, 0.12);
+      color: #fbbf24;
+      border-color: rgba(245, 158, 11, 0.3);
+    }
+
+    /* Layout */
+    .container {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 1.5rem 1.25rem 3rem;
+    }
+
+    /* Nav tabs */
+    .tabs {
+      display: flex;
+      gap: 0.35rem;
+      background: var(--bg-card);
+      padding: 0.4rem;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      margin-bottom: 1.5rem;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .tabs::-webkit-scrollbar { display: none; }
+    .tab {
+      flex: 1;
+      min-width: 110px;
+      padding: 0.65rem 1rem;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-family: inherit;
+      font-size: 0.875rem;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .tab:hover { color: var(--text); background: var(--bg-elevated); }
+    .tab.active {
+      background: var(--accent);
+      color: white;
+      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.35);
+    }
+
+    /* KPI cards */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .kpi {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.15rem 1.25rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .kpi::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--accent);
+    }
+    .kpi.danger::before { background: var(--danger); }
+    .kpi.warning::before { background: var(--warning); }
+    .kpi.success::before { background: var(--success); }
+    .kpi.purple::before { background: var(--purple); }
+    .kpi-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-muted);
+      margin-bottom: 0.35rem;
+    }
+    .kpi-value {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 1.65rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+    }
+    .kpi-sub {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 0.35rem;
+    }
+    .kpi-delta {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.2rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-top: 0.4rem;
+    }
+    .kpi-delta.up { color: var(--danger); }
+    .kpi-delta.down { color: var(--success); }
+
+    /* Cards & sections */
+    .section { display: none; }
+    .section.active { display: block; }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 480px), 1fr));
+      gap: 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+      gap: 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      box-shadow: var(--shadow);
+    }
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .card-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
+    .card-title span {
+      color: var(--text-muted);
+      font-weight: 400;
+      font-size: 0.8rem;
+      margin-left: 0.4rem;
+    }
+
+    .chart-wrap {
+      position: relative;
+      height: 280px;
+    }
+    .chart-wrap.tall { height: 360px; }
+    .chart-wrap.short { height: 220px; }
+
+    select, .select {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 0.8rem;
+      font-weight: 500;
+      padding: 0.4rem 0.7rem;
+      border-radius: 8px;
+      cursor: pointer;
+      outline: none;
+    }
+    select:focus { border-color: var(--accent); }
+
+    /* Tables */
+    .table-wrap {
+      overflow-x: auto;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+    th {
+      background: var(--bg-elevated);
+      text-align: left;
+      padding: 0.65rem 0.9rem;
+      font-weight: 600;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      color: var(--text-muted);
+      white-space: nowrap;
+      border-bottom: 1px solid var(--border);
+    }
+    td {
+      padding: 0.6rem 0.9rem;
+      border-bottom: 1px solid var(--border);
+      font-variant-numeric: tabular-nums;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(59, 130, 246, 0.04); }
+    .num { text-align: right; font-family: 'IBM Plex Mono', monospace; font-size: 0.82rem; }
+    .rank {
+      display: inline-flex;
+      width: 22px; height: 22px;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-elevated);
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--text-muted);
+    }
+    .rank.top { background: var(--accent); color: white; }
+
+    /* Footer */
+    .footer {
+      margin-top: 2.5rem;
+      padding-top: 1.25rem;
+      border-top: 1px solid var(--border);
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      justify-content: space-between;
+    }
+    .footer a { color: #93c5fd; text-decoration: none; }
+    .footer a:hover { text-decoration: underline; }
+
+    /* Notes */
+    .note {
+      background: rgba(245, 158, 11, 0.08);
+      border: 1px solid rgba(245, 158, 11, 0.25);
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      font-size: 0.8rem;
+      color: #fbbf24;
+      margin-bottom: 1.25rem;
+      display: flex;
+      gap: 0.6rem;
+      align-items: flex-start;
+    }
+
+    /* Factor bars (custom) */
+    .factor-list { display: flex; flex-direction: column; gap: 0.55rem; }
+    .factor-row {
+      display: grid;
+      grid-template-columns: 160px 1fr 70px;
+      align-items: center;
+      gap: 0.75rem;
+      font-size: 0.82rem;
+    }
+    .factor-name { color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .factor-bar-bg {
+      height: 10px;
+      background: var(--bg-elevated);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .factor-bar {
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--accent), #60a5fa);
+      transition: width 0.4s ease;
+    }
+    .factor-val {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.8rem;
+      text-align: right;
+      font-weight: 600;
+    }
+
+    @media (max-width: 640px) {
+      .factor-row { grid-template-columns: 110px 1fr 55px; }
+      .kpi-value { font-size: 1.35rem; }
+      .header { padding: 1rem; }
+    }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div class="header-brand">
+      <div class="logo">OH</div>
+      <div>
+        <h1>Ohio Crash Dashboard</h1>
+        <div class="subtitle">OSTATS · Ohio State Highway Patrol / ODPS Electronic Crash System</div>
+      </div>
+    </div>
+    <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+      <span class="badge">Data updated 26 Oct 2026</span>
+      <span class="badge badge-warn">2026 partial (Jan–Oct)</span>
+    </div>
+  </header>
+
+  <div class="container">
+    <!-- KPIs always visible -->
+    <div class="kpi-grid" id="kpiGrid"></div>
+
+    <nav class="tabs" role="tablist">
+      <button class="tab active" data-tab="overview">Overview</button>
+      <button class="tab" data-tab="temporal">Temporal Patterns</button>
+      <button class="tab" data-tab="factors">Contributing Factors</button>
+      <button class="tab" data-tab="locations">Routes &amp; Counties</button>
+      <button class="tab" data-tab="data">Raw Data</button>
+    </nav>
+
+    <!-- ========== OVERVIEW ========== -->
+    <section id="overview" class="section active">
+      <div class="note">
+        <span>⚠</span>
+        <div>
+          <strong>2026 is incomplete</strong> (through ~October). Year-over-year comparisons involving 2026 should be interpreted with caution.
+          Severity categories are mutually exclusive in the source; factor categories may overlap.
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Total Crashes by Year <span>2021–2026</span></div>
+          </div>
+          <div class="chart-wrap"><canvas id="chartTotal"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Severity Breakdown <span>stacked</span></div>
+          </div>
+          <div class="chart-wrap"><canvas id="chartSeverity"></canvas></div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Fatal Crashes Trend</div>
+          </div>
+          <div class="chart-wrap short"><canvas id="chartFatal"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Injury vs PDO Share <span>% of total</span></div>
+          </div>
+          <div class="chart-wrap short"><canvas id="chartShare"></canvas></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== TEMPORAL ========== -->
+    <section id="temporal" class="section">
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Monthly Crashes <span>by year</span></div>
+            <select id="monthYearSelect" onchange="updateMonthlyHighlight()">
+              <option value="all">All years</option>
+              <option value="2021">2021</option>
+              <option value="2022">2022</option>
+              <option value="2023">2023</option>
+              <option value="2024">2024</option>
+              <option value="2025">2025</option>
+              <option value="2026">2026 (partial)</option>
+            </select>
+          </div>
+          <div class="chart-wrap tall"><canvas id="chartMonthly"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Day of Week <span>average pattern</span></div>
+          </div>
+          <div class="chart-wrap tall"><canvas id="chartDow"></canvas></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Hourly Distribution <span>crashes by hour of day</span></div>
+          <select id="hourYearSelect" onchange="updateHourly()">
+            <option value="all">All years (avg)</option>
+            <option value="2021">2021</option>
+            <option value="2022">2022</option>
+            <option value="2023">2023</option>
+            <option value="2024">2024</option>
+            <option value="2025" selected>2025</option>
+            <option value="2026">2026 (partial)</option>
+          </select>
+        </div>
+        <div class="chart-wrap tall"><canvas id="chartHourly"></canvas></div>
+      </div>
+    </section>
+
+    <!-- ========== FACTORS ========== -->
+    <section id="factors" class="section">
+      <div class="card" style="margin-bottom:1.25rem;">
+        <div class="card-header">
+          <div class="card-title">Contributing Factors / Related Crash Types</div>
+          <select id="factorYearSelect" onchange="renderFactors()">
+            <option value="2025" selected>2025</option>
+            <option value="2024">2024</option>
+            <option value="2023">2023</option>
+            <option value="2022">2022</option>
+            <option value="2021">2021</option>
+            <option value="2026">2026 (partial)</option>
+          </select>
+        </div>
+        <div id="factorBars" class="factor-list" style="margin-top:0.5rem;"></div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Selected Factors Trend <span>2021–2026</span></div>
+          </div>
+          <div class="chart-wrap tall"><canvas id="chartFactorsTrend"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">High-Risk Categories <span>% of total crashes</span></div>
+          </div>
+          <div class="chart-wrap tall"><canvas id="chartFactorsPct"></canvas></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== LOCATIONS ========== -->
+    <section id="locations" class="section">
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Top Crash Routes</div>
+            <select id="routeYearSelect" onchange="renderRoutes()">
+              <option value="2025" selected>2025</option>
+              <option value="2024">2024</option>
+              <option value="2023">2023</option>
+              <option value="2022">2022</option>
+              <option value="2021">2021</option>
+              <option value="2026">2026 (partial)</option>
+            </select>
+          </div>
+          <div class="chart-wrap tall"><canvas id="chartRoutes"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Major Counties Comparison</div>
+          </div>
+          <div class="chart-wrap tall"><canvas id="chartCounties"></canvas></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Top Routes Detail Table</div>
+        </div>
+        <div class="table-wrap">
+          <table id="routesTable">
+            <thead>
+              <tr>
+                <th>Year</th>
+                <th>Rank</th>
+                <th>Route</th>
+                <th class="num">Crashes</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== RAW DATA ========== -->
+    <section id="data" class="section">
+      <div class="card" style="margin-bottom:1.25rem;">
+        <div class="card-header">
+          <div class="card-title">Yearly Totals &amp; Severity</div>
+        </div>
+        <div class="table-wrap">
+          <table id="yearTable">
+            <thead>
+              <tr>
+                <th>Year</th>
+                <th class="num">Total</th>
+                <th class="num">Fatal</th>
+                <th class="num">Serious Injury</th>
+                <th class="num">Minor Injury</th>
+                <th class="num">Injury Possible</th>
+                <th class="num">PDO</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Major Counties (approx. from map labels)</div>
+        </div>
+        <div class="table-wrap">
+          <table id="countyTable">
+            <thead>
+              <tr>
+                <th>County</th>
+                <th class="num">2021</th>
+                <th class="num">2022</th>
+                <th class="num">2023</th>
+                <th class="num">2024</th>
+                <th class="num">2025</th>
+                <th class="num">2026*</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <div>
+        Source: OSTATS Crash Dashboard (Ohio State Highway Patrol / ODPS Electronic Crash System).<br />
+        Extracted from public dashboard screenshots · Data as of 26 Oct 2026 · All Counties filter.
+      </div>
+      <div style="text-align:right;">
+        Standalone static application · No data leaves this page<br />
+        2026 figures are partial (Jan–Oct) and not directly comparable to full years.
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    // ========== EMBEDDED DATA ==========
+    const years = [2021, 2022, 2023, 2024, 2025, 2026];
+
+    const yearly = {
+      2021: { total: 269144, fatal: 1242, serious: 6393, minor: 35121, possible: 28155, pdo: 198233, notes: 'Full year' },
+      2022: { total: 264958, fatal: 1177, serious: 6150, minor: 33401, possible: 26273, pdo: 197957, notes: 'Full year' },
+      2023: { total: 252163, fatal: 1150, serious: 6042, minor: 32613, possible: 25126, pdo: 187232, notes: 'Full year' },
+      2024: { total: 250369, fatal: 1077, serious: 6134, minor: 32740, possible: 24366, pdo: 186052, notes: 'Full year' },
+      2025: { total: 263245, fatal: 1029, serious: 5939, minor: 33271, possible: 24506, pdo: 198500, notes: 'Full year' },
+      2026: { total: 199969, fatal: 825, serious: 4954, minor: 26360, possible: 18991, pdo: 148839, notes: 'Partial (Jan–Oct)' }
+    };
+
+    const monthly = {
+      months: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+      2021: [19912,20154,19495,20979,22966,23148,22081,22740,22575,26558,25634,22902],
+      2022: [23216,21010,20074,20132,22517,21099,20116,21533,21652,24916,24906,23787],
+      2023: [22257,17439,21153,19476,22089,19939,19999,20810,20028,23775,23832,21366],
+      2024: [21710,18772,18315,19700,21975,19358,18918,20452,21092,24443,23604,22030],
+      2025: [23691,20042,18499,19693,22146,20584,20275,20575,21581,25523,25425,25211],
+      2026: [23905,20598,19716,19290,21279,20009,19475,20069,20636,14992,null,null]
+    };
+
+    const dow = {
+      days: ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],
+      2021: [30731,38018,39077,40604,40981,44149,35584],
+      2022: [30224,37317,38537,38836,40401,44603,35040],
+      2023: [27558,35146,38094,37660,38826,41789,33090],
+      2024: [26854,34590,37776,37544,38517,42906,32182],
+      2025: [28561,38379,40450,39161,40201,42573,33920],
+      2026: [21308,28565,30129,30339,31663,33260,24705]
+    };
+
+    const hourly = {
+      labels: ['12a','1a','2a','3a','4a','5a','6a','7a','8a','9a','10a','11a','12p','1p','2p','3p','4p','5p','6p','7p','8p','9p','10p','11p'],
+      2021: [6265,4919,4743,3696,3301,5021,8184,11647,10259,9039,10476,12605,14850,15062,17929,21430,21536,21237,16781,13105,11245,10246,8657,7011],
+      2022: [5777,4247,4544,3181,3105,5186,8513,13149,11457,9968,10684,12639,14655,14326,17040,21135,21184,20639,16342,12230,10586,9484,8139,6548],
+      2023: [5274,4108,4076,3162,2946,4877,8545,13251,11244,9563,10266,11965,13888,13598,16250,19909,20132,19569,15514,11745,9924,8825,7543,5889],
+      2024: [5164,4038,3786,3023,2864,4986,8637,13231,11454,9636,10073,11638,13654,13645,16283,19907,19536,19617,15437,11829,9886,9064,7177,5804],
+      2025: [5246,4054,3764,3002,3199,5665,9574,14341,12664,10469,10700,12512,14271,14290,17466,20961,21143,19738,15826,11715,10007,9284,7557,5797],
+      2026: [4140,3121,2991,2377,2316,4262,7152,10688,9658,8149,8412,9697,11150,10955,13355,16086,16529,14561,10816,8572,7574,7280,5807,4317]
+    };
+
+    const factors = {
+      labels: [
+        'Alcohol-Related','Bicycle-Related','Buggy-Related','Commercial-Related','Deer-Related',
+        'Distracted-Related','Drug-Related','Failure To Yield-Related','Mature-Related','Motorcycle-Related',
+        'OVI-Related','Pedestrian-Related','Ran Red Light/Stop Sign-Related','School Bus-Related',
+        'Speed-Related','Teen-Related','Unbelted-Related','Work Zone-Related','Youth-Related'
+      ],
+      2021: [11053,1129,152,16434,18615,11883,4272,37636,89340,4001,13725,2433,13656,1046,31279,37551,54324,4793,85306],
+      2022: [10054,1095,128,17152,19914,10264,2996,37489,90785,4095,11789,2417,13279,1249,29938,35331,51892,4636,80776],
+      2023: [9627,1262,100,15756,20175,9143,2919,37374,88355,3878,11278,2582,12622,1310,28103,34915,49767,4101,76848],
+      2024: [9283,1334,116,15954,19948,8550,2625,38227,88891,4052,10721,2672,12912,1348,27245,35247,47264,4000,77119],
+      2025: [8751,1349,116,17620,21235,8341,2494,39458,92891,3643,10121,2657,12868,1461,29812,36782,48898,4431,80489],
+      2026: [6745,1373,104,14521,13016,6377,1746,32062,71580,3413,7643,2049,10068,1111,21783,27367,37996,3514,61076]
+    };
+
+    const routes = [
+      { year:2021, rank:1, route:'IR-75', crashes:5842 },
+      { year:2021, rank:2, route:'IR-71', crashes:4327 },
+      { year:2021, rank:3, route:'US-42', crashes:2964 },
+      { year:2021, rank:4, route:'IR-70', crashes:2962 },
+      { year:2021, rank:5, route:'US-20', crashes:2715 },
+      { year:2021, rank:6, route:'US-23', crashes:2476 },
+      { year:2021, rank:7, route:'IR-77', crashes:2447 },
+      { year:2021, rank:8, route:'IR-90', crashes:2375 },
+      { year:2021, rank:9, route:'SR-4', crashes:2212 },
+      { year:2022, rank:1, route:'IR-75', crashes:5937 },
+      { year:2022, rank:2, route:'IR-71', crashes:4653 },
+      { year:2022, rank:3, route:'IR-70', crashes:3126 },
+      { year:2022, rank:4, route:'US-42', crashes:2765 },
+      { year:2022, rank:5, route:'IR-77', crashes:2597 },
+      { year:2022, rank:6, route:'US-20', crashes:2594 },
+      { year:2022, rank:7, route:'IR-90', crashes:2510 },
+      { year:2022, rank:8, route:'US-23', crashes:2427 },
+      { year:2022, rank:9, route:'US-40', crashes:2099 },
+      { year:2023, rank:1, route:'IR-75', crashes:5654 },
+      { year:2023, rank:2, route:'IR-71', crashes:4444 },
+      { year:2023, rank:3, route:'IR-70', crashes:2819 },
+      { year:2023, rank:4, route:'US-42', crashes:2549 },
+      { year:2023, rank:5, route:'US-20', crashes:2507 },
+      { year:2023, rank:6, route:'US-23', crashes:2381 },
+      { year:2023, rank:7, route:'IR-77', crashes:2279 },
+      { year:2023, rank:8, route:'IR-90', crashes:2139 },
+      { year:2023, rank:9, route:'SR-4', crashes:2032 },
+      { year:2024, rank:1, route:'IR-75', crashes:5956 },
+      { year:2024, rank:2, route:'IR-71', crashes:4599 },
+      { year:2024, rank:3, route:'IR-70', crashes:2810 },
+      { year:2024, rank:4, route:'US-42', crashes:2697 },
+      { year:2024, rank:5, route:'US-20', crashes:2501 },
+      { year:2024, rank:6, route:'US-23', crashes:2457 },
+      { year:2024, rank:7, route:'SR-4', crashes:2147 },
+      { year:2024, rank:8, route:'IR-77', crashes:2102 },
+      { year:2024, rank:9, route:'US-40', crashes:2079 },
+      { year:2025, rank:1, route:'IR-75', crashes:6642 },
+      { year:2025, rank:2, route:'IR-71', crashes:5295 },
+      { year:2025, rank:3, route:'IR-70', crashes:3383 },
+      { year:2025, rank:4, route:'US-23', crashes:2773 },
+      { year:2025, rank:5, route:'US-42', crashes:2754 },
+      { year:2025, rank:6, route:'US-20', crashes:2612 },
+      { year:2025, rank:7, route:'IR-77', crashes:2286 },
+      { year:2025, rank:8, route:'SR-4', crashes:2250 },
+      { year:2025, rank:9, route:'IR-80', crashes:2193 },
+      { year:2026, rank:1, route:'IR-75', crashes:5047 },
+      { year:2026, rank:2, route:'IR-71', crashes:4017 },
+      { year:2026, rank:3, route:'IR-70', crashes:2788 },
+      { year:2026, rank:4, route:'US-20', crashes:1999 },
+      { year:2026, rank:5, route:'US-42', crashes:1990 },
+      { year:2026, rank:6, route:'US-23', crashes:1880 },
+      { year:2026, rank:7, route:'IR-77', crashes:1684 },
+      { year:2026, rank:8, route:'IR-80', crashes:1669 },
+      { year:2026, rank:9, route:'IR-90', crashes:1596 }
+    ];
+
+    const counties = {
+      names: ['Cuyahoga','Franklin','Hamilton','Montgomery','Summit'],
+      2021: [30720,22711,29312,12850,13302],
+      2022: [30789,22519,28385,11988,14572],
+      2023: [26834,23414,27418,11197,12899],
+      2024: [22252,24005,28350,11458,12642],
+      2025: [24025,24935,28854,11976,13119],
+      2026: [19540,18573,21920,9222,9442]
+    };
+
+    // ========== UTILITIES ==========
+    const fmt = n => n == null ? '—' : n.toLocaleString('en-US');
+    const pct = (a, b) => b ? ((a / b) * 100).toFixed(1) + '%' : '—';
+
+    const palette = {
+      blue: '#3b82f6',
+      cyan: '#22d3ee',
+      purple: '#a78bfa',
+      orange: '#fb923c',
+      green: '#10b981',
+      red: '#ef4444',
+      yellow: '#f59e0b',
+      pink: '#f472b6',
+      slate: '#94a3b8'
+    };
+
+    Chart.defaults.color = '#8b9bb8';
+    Chart.defaults.borderColor = '#243049';
+    Chart.defaults.font.family = "'IBM Plex Sans', system-ui, sans-serif";
+    Chart.defaults.font.size = 12;
+    Chart.defaults.plugins.legend.labels.boxWidth = 12;
+    Chart.defaults.plugins.legend.labels.usePointStyle = true;
+    Chart.defaults.plugins.legend.labels.pointStyle = 'circle';
+
+    // ========== TABS ==========
+    document.querySelectorAll('.tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(btn.dataset.tab).classList.add('active');
+      });
+    });
+
+    // ========== KPIs ==========
+    function renderKPIs() {
+      const y25 = yearly[2025];
+      const y24 = yearly[2024];
+      const y21 = yearly[2021];
+      const totalDelta = ((y25.total - y24.total) / y24.total * 100).toFixed(1);
+      const fatalDelta = ((y25.fatal - y24.fatal) / y24.fatal * 100).toFixed(1);
+      const fatalDelta5 = ((y25.fatal - y21.fatal) / y21.fatal * 100).toFixed(1);
+      const injury25 = y25.serious + y25.minor + y25.possible;
+      const injury24 = y24.serious + y24.minor + y24.possible;
+
+      document.getElementById('kpiGrid').innerHTML = `
+        <div class="kpi">
+          <div class="kpi-label">2025 Total Crashes</div>
+          <div class="kpi-value">${fmt(y25.total)}</div>
+          <div class="kpi-delta ${totalDelta >= 0 ? 'up' : 'down'}">
+            ${totalDelta >= 0 ? '▲' : '▼'} ${Math.abs(totalDelta)}% vs 2024
+          </div>
+        </div>
+        <div class="kpi danger">
+          <div class="kpi-label">2025 Fatal Crashes</div>
+          <div class="kpi-value">${fmt(y25.fatal)}</div>
+          <div class="kpi-delta down">▼ ${Math.abs(fatalDelta)}% vs 2024 · ${fatalDelta5}% since 2021</div>
+        </div>
+        <div class="kpi warning">
+          <div class="kpi-label">2025 Injury Crashes</div>
+          <div class="kpi-value">${fmt(injury25)}</div>
+          <div class="kpi-sub">Serious + Minor + Possible</div>
+        </div>
+        <div class="kpi success">
+          <div class="kpi-label">2025 Property Damage Only</div>
+          <div class="kpi-value">${fmt(y25.pdo)}</div>
+          <div class="kpi-sub">${pct(y25.pdo, y25.total)} of total</div>
+        </div>
+        <div class="kpi purple">
+          <div class="kpi-label">2026 YTD (partial)</div>
+          <div class="kpi-value">${fmt(yearly[2026].total)}</div>
+          <div class="kpi-sub">Jan–Oct · ${fmt(yearly[2026].fatal)} fatal</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">5-yr Fatal Decline</div>
+          <div class="kpi-value">${fmt(y21.fatal - y25.fatal)}</div>
+          <div class="kpi-sub">2021 → 2025 absolute reduction</div>
+        </div>
+      `;
+    }
+
+    // ========== CHARTS ==========
+    let chartTotal, chartSeverity, chartFatal, chartShare;
+    let chartMonthly, chartDow, chartHourly;
+    let chartFactorsTrend, chartFactorsPct, chartRoutes, chartCounties;
+
+    function initOverviewCharts() {
+      // Total line
+      chartTotal = new Chart(document.getElementById('chartTotal'), {
+        type: 'bar',
+        data: {
+          labels: years.map(y => y === 2026 ? '2026*' : String(y)),
+          datasets: [{
+            label: 'Total Crashes',
+            data: years.map(y => yearly[y].total),
+            backgroundColor: years.map(y => y === 2026 ? 'rgba(148,163,184,0.45)' : palette.blue),
+            borderRadius: 6,
+            borderSkipped: false
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                afterLabel: ctx => years[ctx.dataIndex] === 2026 ? 'Partial year (Jan–Oct)' : ''
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: false,
+              ticks: { callback: v => (v / 1000) + 'k' },
+              grid: { color: 'rgba(36,48,73,0.6)' }
+            },
+            x: { grid: { display: false } }
+          }
+        }
+      });
+
+      // Severity stacked
+      chartSeverity = new Chart(document.getElementById('chartSeverity'), {
+        type: 'bar',
+        data: {
+          labels: years.map(y => y === 2026 ? '2026*' : String(y)),
+          datasets: [
+            { label: 'Fatal', data: years.map(y => yearly[y].fatal), backgroundColor: palette.red, borderRadius: 2 },
+            { label: 'Serious Injury', data: years.map(y => yearly[y].serious), backgroundColor: palette.orange, borderRadius: 2 },
+            { label: 'Minor Injury', data: years.map(y => yearly[y].minor), backgroundColor: palette.yellow, borderRadius: 2 },
+            { label: 'Injury Possible', data: years.map(y => yearly[y].possible), backgroundColor: palette.cyan, borderRadius: 2 },
+            { label: 'PDO', data: years.map(y => yearly[y].pdo), backgroundColor: 'rgba(59,130,246,0.55)', borderRadius: 2 }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: 'bottom' } },
+          scales: {
+            x: { stacked: true, grid: { display: false } },
+            y: {
+              stacked: true,
+              ticks: { callback: v => (v / 1000) + 'k' },
+              grid: { color: 'rgba(36,48,73,0.6)' }
+            }
+          }
+        }
+      });
+
+      // Fatal trend
+      chartFatal = new Chart(document.getElementById('chartFatal'), {
+        type: 'line',
+        data: {
+          labels: years.map(y => y === 2026 ? '2026*' : String(y)),
+          datasets: [{
+            label: 'Fatal',
+            data: years.map(y => yearly[y].fatal),
+            borderColor: palette.red,
+            backgroundColor: 'rgba(239,68,68,0.12)',
+            fill: true,
+            tension: 0.3,
+            pointRadius: 5,
+            pointBackgroundColor: palette.red
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { beginAtZero: false, grid: { color: 'rgba(36,48,73,0.6)' } },
+            x: { grid: { display: false } }
+          }
+        }
+      });
+
+      // Share (injury vs PDO)
+      chartShare = new Chart(document.getElementById('chartShare'), {
+        type: 'line',
+        data: {
+          labels: years.map(y => y === 2026 ? '2026*' : String(y)),
+          datasets: [
+            {
+              label: 'Injury (all levels) %',
+              data: years.map(y => {
+                const t = yearly[y];
+                return +((t.fatal + t.serious + t.minor + t.possible) / t.total * 100).toFixed(1);
+              }),
+              borderColor: palette.orange,
+              tension: 0.3,
+              pointRadius: 4
+            },
+            {
+              label: 'PDO %',
+              data: years.map(y => +((yearly[y].pdo / yearly[y].total) * 100).toFixed(1)),
+              borderColor: palette.blue,
+              tension: 0.3,
+              pointRadius: 4
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: 'bottom' } },
+          scales: {
+            y: {
+              min: 0, max: 100,
+              ticks: { callback: v => v + '%' },
+              grid: { color: 'rgba(36,48,73,0.6)' }
+            },
+            x: { grid: { display: false } }
+          }
+        }
+      });
+    }
+
+    function initTemporalCharts() {
+      const yearColors = {
+        2021: '#64748b',
+        2022: '#94a3b8',
+        2023: '#22d3ee',
+        2024: '#a78bfa',
+        2025: '#3b82f6',
+        2026: '#f59e0b'
+      };
+
+      chartMonthly = new Chart(document.getElementById('chartMonthly'), {
+        type: 'line',
+        data: {
+          labels: monthly.months,
+          datasets: years.map(y => ({
+            label: y === 2026 ? '2026*' : String(y),
+            data: monthly[y],
+            borderColor: yearColors[y],
+            backgroundColor: 'transparent',
+            tension: 0.3,
+            pointRadius: 3,
+            borderWidth: y === 2025 ? 2.5 : 1.5,
+            borderDash: y === 2026 ? [4, 3] : []
+          }))
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: { legend: { position: 'bottom' } },
+          scales: {
+            y: {
+              ticks: { callback: v => (v / 1000) + 'k' },
+              grid: { color: 'rgba(36,48,73,0.6)' }
+            },
+            x: { grid: { display: false } }
+          }
+        }
+      });
+
+      // Day of week – average of full years 2021-2025
+      const avgDow = dow.days.map((_, i) => {
+        let sum = 0;
+        for (let y of [2021,2022,2023,2024,2025]) sum += dow[y][i];
+        return Math.round(sum / 5);
+      });
+
+      chartDow = new Chart(document.getElementById('chartDow'), {
+        type: 'bar',
+        data: {
+          labels: dow.days,
+          datasets: [
+            {
+              label: '2021–2025 Avg',
+              data: avgDow,
+              backgroundColor: 'rgba(59,130,246,0.55)',
+              borderRadius: 6
+            },
+            {
+              label: '2025',
+              data: dow[2025],
+              backgroundColor: palette.blue,
+              borderRadius: 6
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: 'bottom' } },
+          scales: {
+            y: {
+              ticks: { callback: v => (v / 1000) + 'k' },
+              grid: { color: 'rgba(36,48,73,0.6)' }
+            },
+            x: { grid: { display: false } }
+          }
+        }
+      });
+
+      chartHourly = new Chart(document.getElementById('chartHourly'), {
+        type: 'line',
+        data: {
+          labels: hourly.labels,
+          datasets: [{
+            label: '2025',
+            data: hourly[2025],
+            borderColor: palette.blue,
+            backgroundColor: 'rgba(59,130,246,0.15)',
+            fill: true,
+            tension: 0.35,
+            pointRadius: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: {
+              ticks: { callback: v => (v / 1000) + 'k' },
+              grid: { color: 'rgba(36,48,73,0.6)' }
+            },
+            x: { grid: { display: false } }
+          }
+        }
+      });
+    }
+
+    function updateHourly() {
+      const y = document.getElementById('hourYearSelect').value;
+      if (y === 'all') {
+        const avg = hourly.labels.map((_, i) => {
+          let sum = 0, n = 0;
+          for (let yr of [2021,2022,2023,2024,2025]) {
+            sum += hourly[yr][i];
+            n++;
+          }
+          return Math.round(sum / n);
+        });
+        chartHourly.data.datasets[0].data = avg;
+        chartHourly.data.datasets[0].label = '2021–2025 Average';
+      } else {
+        chartHourly.data.datasets[0].data = hourly[y];
+        chartHourly.data.datasets[0].label = y === '2026' ? '2026 (partial)' : y;
+      }
+      chartHourly.update();
+    }
+
+    function updateMonthlyHighlight() {
+      // Optional: could dim other years – kept simple
+    }
+
+    // Factors
+    function renderFactors() {
+      const y = +document.getElementById('factorYearSelect').value;
+      const data = factors[y];
+      const total = yearly[y].total;
+      const pairs = factors.labels.map((l, i) => ({ name: l, val: data[i] }))
+        .sort((a, b) => b.val - a.val);
+
+      const max = pairs[0].val;
+      document.getElementById('factorBars').innerHTML = pairs.map(p => `
+        <div class="factor-row">
+          <div class="factor-name" title="${p.name}">${p.name.replace('-Related','')}</div>
+          <div class="factor-bar-bg">
+            <div class="factor-bar" style="width:${(p.val / max * 100).toFixed(1)}%"></div>
+          </div>
+          <div class="factor-val">${fmt(p.val)}</div>
+        </div>
+      `).join('');
+    }
+
+    function initFactorCharts() {
+      const keyFactors = [
+        { idx: 8, name: 'Mature', color: palette.purple },
+        { idx: 18, name: 'Youth', color: palette.cyan },
+        { idx: 16, name: 'Unbelted', color: palette.orange },
+        { idx: 7, name: 'Fail to Yield', color: palette.blue },
+        { idx: 14, name: 'Speed', color: palette.red },
+        { idx: 15, name: 'Teen', color: palette.yellow }
+      ];
+
+      chartFactorsTrend = new Chart(document.getElementById('chartFactorsTrend'), {
+        type: 'line',
+        data: {
+          labels: years.map(y => y === 2026 ? '2026*' : String(y)),
+          datasets: keyFactors.map(f => ({
+            label: f.name,
+            data: years.map(y => factors[y][f.idx]),
+            borderColor: f.color,
+            tension: 0.3,
+            pointRadius: 3,
+            borderWidth: 2
+          }))
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: { legend: { position: 'bottom' } },
+          scales: {
+            y: {
+              ticks: { callback: v => (v / 1000) + 'k' },
+              grid: { color: 'rgba(36,48,73,0.6)' }
+            },
+            x: { grid: { display: false } }
+          }
+        }
+      });
+
+      // % of total for selected year (default 2025)
+      const y = 2025;
+      const pctData = keyFactors.map(f => +((factors[y][f.idx] / yearly[y].total) * 100).toFixed(1));
+      chartFactorsPct = new Chart(document.getElementById('chartFactorsPct'), {
+        type: 'doughnut',
+        data: {
+          labels: keyFactors.map(f => f.name),
+          datasets: [{
+            data: pctData,
+            backgroundColor: keyFactors.map(f => f.color),
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'bottom' },
+            tooltip: {
+              callbacks: {
+                label: ctx => `${ctx.label}: ${ctx.raw}% of total crashes`
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function renderRoutes() {
+      const y = +document.getElementById('routeYearSelect').value;
+      const data = routes.filter(r => r.year === y).sort((a, b) => a.rank - b.rank);
+
+      if (chartRoutes) chartRoutes.destroy();
+      chartRoutes = new Chart(document.getElementById('chartRoutes'), {
+        type: 'bar',
+        data: {
+          labels: data.map(d => d.route),
+          datasets: [{
+            label: 'Crashes',
+            data: data.map(d => d.crashes),
+            backgroundColor: data.map((_, i) => i === 0 ? palette.red : i < 3 ? palette.orange : palette.blue),
+            borderRadius: 6
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: {
+              ticks: { callback: v => v.toLocaleString() },
+              grid: { color: 'rgba(36,48,73,0.6)' }
+            },
+            y: { grid: { display: false } }
+          }
+        }
+      });
+
+      // Full routes table
+      const tbody = document.querySelector('#routesTable tbody');
+      tbody.innerHTML = routes.map(r => `
+        <tr>
+          <td>${r.year}${r.year === 2026 ? '*' : ''}</td>
+          <td><span class="rank ${r.rank <= 3 ? 'top' : ''}">${r.rank}</span></td>
+          <td>${r.route}</td>
+          <td class="num">${fmt(r.crashes)}</td>
+        </tr>
+      `).join('');
+    }
+
+    function initCountyChart() {
+      chartCounties = new Chart(document.getElementById('chartCounties'), {
+        type: 'bar',
+        data: {
+          labels: counties.names,
+          datasets: [
+            { label: '2021', data: counties[2021], backgroundColor: 'rgba(100,116,139,0.7)' },
+            { label: '2023', data: counties[2023], backgroundColor: 'rgba(34,211,238,0.7)' },
+            { label: '2025', data: counties[2025], backgroundColor: palette.blue },
+            { label: '2026*', data: counties[2026], backgroundColor: 'rgba(245,158,11,0.65)' }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: 'bottom' } },
+          scales: {
+            y: {
+              ticks: { callback: v => (v / 1000) + 'k' },
+              grid: { color: 'rgba(36,48,73,0.6)' }
+            },
+            x: { grid: { display: false } }
+          }
+        }
+      });
+    }
+
+    // Raw tables
+    function renderTables() {
+      document.querySelector('#yearTable tbody').innerHTML = years.map(y => {
+        const d = yearly[y];
+        return `<tr>
+          <td>${y}${y === 2026 ? '*' : ''}</td>
+          <td class="num">${fmt(d.total)}</td>
+          <td class="num">${fmt(d.fatal)}</td>
+          <td class="num">${fmt(d.serious)}</td>
+          <td class="num">${fmt(d.minor)}</td>
+          <td class="num">${fmt(d.possible)}</td>
+          <td class="num">${fmt(d.pdo)}</td>
+          <td>${d.notes}</td>
+        </tr>`;
+      }).join('');
+
+      document.querySelector('#countyTable tbody').innerHTML = counties.names.map((name, i) => `
+        <tr>
+          <td>${name}</td>
+          ${[2021,2022,2023,2024,2025,2026].map(y => `<td class="num">${fmt(counties[y][i])}</td>`).join('')}
+        </tr>
+      `).join('');
+    }
+
+    // ========== INIT ==========
+    renderKPIs();
+    initOverviewCharts();
+    initTemporalCharts();
+    renderFactors();
+    initFactorCharts();
+    renderRoutes();
+    initCountyChart();
+    renderTables();
+  </script>
+</body>
+</html>
